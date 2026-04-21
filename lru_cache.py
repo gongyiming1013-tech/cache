@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 
 # --- Exceptions ---
 
@@ -119,3 +121,52 @@ class LRUCache:
         node.prev = self._head
         node.next = first
         first.prev = node
+
+
+# --- Thread-Safe LRU Cache (V1) ---
+
+class ThreadSafeLRUCache:
+    """Thread-safe LRU cache wrapper using coarse-grained locking.
+
+    Wraps an ``LRUCache`` instance via composition and serializes all
+    ``get`` and ``put`` calls with a ``threading.Lock``.
+    """
+
+    def __init__(self, capacity: int) -> None:
+        """Initialize the thread-safe LRU cache.
+
+        Args:
+            capacity: Maximum number of key-value pairs to store.
+
+        Raises:
+            InvalidCapacityError: If capacity is less than or equal to 0.
+        """
+        self._cache = LRUCache(capacity)
+        self._lock = threading.Lock()
+
+    def get(self, key: int) -> int:
+        """Retrieve the value for the given key (thread-safe).
+
+        Args:
+            key: The key to look up.
+
+        Returns:
+            The value associated with the key.
+
+        Raises:
+            CacheMissError: If the key is not in the cache.
+        """
+        with self._lock:
+            return self._cache.get(key)
+
+    def put(self, key: int, value: int) -> None:
+        """Insert or update a key-value pair (thread-safe).
+
+        Evicts the LRU item if at capacity.
+
+        Args:
+            key: The key to insert or update.
+            value: The value to associate with the key.
+        """
+        with self._lock:
+            self._cache.put(key, value)
